@@ -402,7 +402,7 @@ data = dict(
 
 optimizer = dict(
     type='AdamW',
-    lr=2e-3,  # linear scaling: 2e-4 * 16 (samples_per_gpu=16 vs original 1)
+    lr=3.2e-3,  # linear scaling: 2e-4 * 16 (samples_per_gpu=16 vs original 1)
     paramwise_cfg=dict(
         custom_keys={
             'img_backbone': dict(lr_mult=0.0),  # backbone is frozen
