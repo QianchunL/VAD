@@ -3,10 +3,9 @@ import copy
 
 import torch
 from mmdet.models import DETECTORS
-from mmdet3d.core import bbox3d2result
 from mmcv.runner import force_fp32, auto_fp16
 from scipy.optimize import linear_sum_assignment
-from mmdet3d.models.detectors.mvx_two_stage import MVXTwoStageDetector
+from projects.mmdet3d_plugin.mmdet3d_compat import bbox3d2result, MVXTwoStageDetector
 
 from projects.mmdet3d_plugin.models.utils.grid_mask import GridMask
 from projects.mmdet3d_plugin.VAD.planner.metric_stp3 import PlanningMetric

@@ -3,8 +3,8 @@ from numpy import random
 import mmcv
 from mmdet.datasets.builder import PIPELINES
 from mmcv.parallel import DataContainer as DC
-from mmdet3d.core.bbox import (CameraInstance3DBoxes, DepthInstance3DBoxes,
-                               LiDARInstance3DBoxes, box_np_ops)
+from projects.mmdet3d_plugin.mmdet3d_compat import (
+    CameraInstance3DBoxes, DepthInstance3DBoxes, LiDARInstance3DBoxes, box_np_ops)
 
 
 @PIPELINES.register_module()

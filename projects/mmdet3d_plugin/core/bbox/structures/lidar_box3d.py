@@ -2,10 +2,9 @@
 import numpy as np
 import torch
 
-from mmdet3d.core.points import BasePoints
-from mmdet3d.ops.roiaware_pool3d import points_in_boxes_gpu
-from mmdet3d.core.bbox.structures.base_box3d import BaseInstance3DBoxes
-from mmdet3d.core.bbox.structures.utils import limit_period, rotation_3d_in_axis
+from projects.mmdet3d_plugin.mmdet3d_compat import (
+    BasePoints, points_in_boxes_gpu, BaseInstance3DBoxes,
+    limit_period, rotation_3d_in_axis)
 
 
 class CustomLiDARInstance3DBoxes(BaseInstance3DBoxes):
@@ -245,7 +244,7 @@ class CustomLiDARInstance3DBoxes(BaseInstance3DBoxes):
             :obj:`BaseInstance3DBoxes`: \
                 The converted box of the same type in the ``dst`` mode.
         """
-        from mmdet3d.core.bbox.structures.box_3d_mode import Box3DMode
+        from projects.mmdet3d_plugin.mmdet3d_compat import Box3DMode
         return Box3DMode.convert(
             box=self, src=Box3DMode.LIDAR, dst=dst, rt_mat=rt_mat)
 

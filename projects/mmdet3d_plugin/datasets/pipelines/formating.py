@@ -3,11 +3,10 @@
 import numpy as np
 from mmcv.parallel import DataContainer as DC
 
-from mmdet3d.core.bbox import BaseInstance3DBoxes
-from mmdet3d.core.points import BasePoints
 from mmdet.datasets.builder import PIPELINES
 from mmdet.datasets.pipelines import to_tensor
-from mmdet3d.datasets.pipelines import DefaultFormatBundle3D
+from projects.mmdet3d_plugin.mmdet3d_compat import (
+    BaseInstance3DBoxes, BasePoints, DefaultFormatBundle3D)
 
 @PIPELINES.register_module()
 class CustomDefaultFormatBundle3D(DefaultFormatBundle3D):

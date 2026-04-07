@@ -11,7 +11,7 @@ from mmdet.models.dense_heads import DETRHead
 from mmcv.runner import force_fp32, auto_fp16
 from mmcv.utils import TORCH_VERSION, digit_version
 from mmdet.core import build_assigner, build_sampler
-from mmdet3d.core.bbox.coders import build_bbox_coder
+from projects.mmdet3d_plugin.mmdet3d_compat import build_bbox_coder
 from mmdet.models.utils.transformer import inverse_sigmoid
 from mmdet.core.bbox.transforms import bbox_xyxy_to_cxcywh
 from mmcv.cnn import Linear, bias_init_with_prob, xavier_init

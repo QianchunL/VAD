@@ -6,7 +6,7 @@ from typing import Dict, List
 
 import numpy as np
 from mmdet.datasets import DATASETS
-from mmdet3d.datasets import NuScenesDataset
+from projects.mmdet3d_plugin.mmdet3d_compat import NuScenesDataset
 import pyquaternion
 import mmcv
 from os import path as osp
@@ -19,7 +19,7 @@ from nuscenes.eval.common.utils import center_distance
 from projects.mmdet3d_plugin.models.utils.visual import save_tensor
 from mmcv.parallel import DataContainer as DC
 import random
-from mmdet3d.core import LiDARInstance3DBoxes
+from projects.mmdet3d_plugin.mmdet3d_compat import LiDARInstance3DBoxes
 from nuscenes.utils.data_classes import Box as NuScenesBox
 from projects.mmdet3d_plugin.core.bbox.structures.nuscenes_box import CustomNuscenesBox
 from shapely import affinity, ops
