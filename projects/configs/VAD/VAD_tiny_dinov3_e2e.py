@@ -402,7 +402,7 @@ data = dict(
 
 optimizer = dict(
     type='AdamW',
-    lr=4e-4,  # conservative: sqrt scaling sqrt(10)*2e-4 ~ 6e-4, use 4e-4 for stability
+    lr=2e-4,  # same as original VAD_tiny default
     paramwise_cfg=dict(
         custom_keys={
             'img_backbone': dict(lr_mult=0.0),  # backbone is frozen
