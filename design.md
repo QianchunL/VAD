@@ -56,17 +56,22 @@ projects/mmdet3d_plugin/__init__.py                   # 导入 DINOv3Backbone
 ```python
 img_backbone=dict(
     type='DINOv3Backbone',
-    model_name='dinov3_vits16',           # 模型名称
-    repo_path='third_party/dinov3',        # DINOv3 仓库本地路径
-    pretrained_weights='ckpts/dinov3_vits16.pth',  # checkpoint 路径
-    frozen=True,                           # 冻结 backbone 参数
+    model_path='ckpts/dinov3-vits16-pretrain-lvd1689m',  # 本地 HF 模型目录
+    num_register_tokens=4,    # DINOv3 ViT-S/16 有 4 个 register tokens
+    patch_size=16,
+    embed_dim=384,            # ViT-S embed dim
+    frozen=True,              # 冻结 backbone 参数
 )
 ```
 
 Forward 流程:
-1. 输入: `(B×N_cam, 3, H, W)` → DINOv3 patch embedding
-2. 提取最后一层 patch tokens via `get_intermediate_layers(n=1, reshape=True)`
-3. 输出: `((B×N_cam, 384, H/16, W/16),)` - tuple 格式兼容 FPN
+1. 输入: `(B×N_cam, 3, H, W)` → `AutoModel.forward(pixel_values=x)`
+2. `last_hidden_state`: shape `(B, 1+4+H/16×W/16, 384)` = `[CLS, reg×4, patches...]`
+3. 丢弃前 5 个 prefix tokens，保留 patch tokens
+4. reshape: `(B, H/16×W/16, 384)` → `(B, 384, H/16, W/16)`
+5. 输出: `((B×N_cam, 384, H/16, W/16),)` - tuple 格式兼容 FPN
+
+注意: `transformers >= 4.56.0` 是必要依赖。
 
 ---
 
@@ -79,48 +84,42 @@ mkdir -p third_party
 git clone https://github.com/facebookresearch/dinov3 third_party/dinov3
 ```
 
-### 2. 下载 DINOv3 权重
+### 2. 下载 DINOv3 模型
 
-从 HuggingFace 下载 ViT-S/16 checkpoint:
+权重文件为 `model.safetensors`，通过 HuggingFace `transformers` 库加载（需要 `transformers >= 4.56.0`）。
 
 ```bash
 mkdir -p ckpts
-# 方式1: huggingface-cli
-huggingface-cli download facebook/dinov3-vits16-pretrain-lvd1689m \
-    --local-dir ckpts/dinov3-vits16 --repo-type model
 
-# 方式2: python
+# 方式1: huggingface-cli (推荐)
+huggingface-cli download facebook/dinov3-vits16-pretrain-lvd1689m \
+    --local-dir ckpts/dinov3-vits16-pretrain-lvd1689m \
+    --repo-type model
+
+# 方式2: python snapshot_download
 python -c "
-from huggingface_hub import hf_hub_download
-hf_hub_download(
+from huggingface_hub import snapshot_download
+snapshot_download(
     repo_id='facebook/dinov3-vits16-pretrain-lvd1689m',
-    filename='pytorch_model.bin',
-    local_dir='ckpts/'
+    local_dir='ckpts/dinov3-vits16-pretrain-lvd1689m',
 )
 "
-# 重命名为配置文件期望的名称
-mv ckpts/pytorch_model.bin ckpts/dinov3_vits16.pth
 ```
 
-> 注意: HuggingFace 上的 DINOv3 checkpoint 格式可能为 safetensors 或 transformers 格式。
-> 若权重 key 格式不匹配，需要转换。详见下方"权重转换"章节。
+下载完成后目录结构应为：
+```
+ckpts/dinov3-vits16-pretrain-lvd1689m/
+├── config.json
+├── preprocessor_config.json
+└── model.safetensors
+```
 
-### 3. 权重格式转换（如需要）
+### 3. 安装 transformers >= 4.56.0
 
-DINOv3 通过 torch.hub.load 加载的模型期望 `model.load_state_dict(state_dict)` 兼容的格式。若 HF 权重包含额外前缀，可用以下脚本转换：
+DINOv3 需要 transformers 4.56.0+：
 
-```python
-import torch
-ckpt = torch.load('ckpts/dinov3_vits16.pth', map_location='cpu')
-# 若有嵌套结构
-if 'model' in ckpt:
-    ckpt = ckpt['model']
-# 检查 key 是否有前缀 (如 'backbone.')
-keys = list(ckpt.keys())
-print(keys[:5])
-# 如有前缀, 去掉:
-# ckpt = {k.replace('backbone.', ''): v for k, v in ckpt.items()}
-torch.save(ckpt, 'ckpts/dinov3_vits16_clean.pth')
+```bash
+pip install "transformers>=4.56.0"
 ```
 
 ### 4. 验证数据集路径

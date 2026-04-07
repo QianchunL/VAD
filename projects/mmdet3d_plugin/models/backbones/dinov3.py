@@ -9,73 +9,47 @@ from mmdet.models.builder import BACKBONES
 class DINOv3Backbone(BaseModule):
     """DINOv3 ViT backbone wrapper for VAD.
 
-    Loads a DINOv3 ViT model from a local clone of facebookresearch/dinov3
-    via torch.hub and exposes its patch-token features as a 2D feature map
-    compatible with the FPN neck.
+    Loads a DINOv3 model from HuggingFace Transformers (requires
+    transformers >= 4.56.0) and exposes patch-token features as a 2D
+    feature map compatible with the FPN neck.
 
     Args:
-        model_name (str): Entry point in dinov3 hubconf, e.g. 'dinov3_vits16'.
-        repo_path (str): Path to the local dinov3 repo (cloned from GitHub).
-        pretrained_weights (str): Path to the .pth checkpoint file.
+        model_path (str): Path to local HuggingFace model directory
+            (downloaded via huggingface-cli or snapshot_download).
+        num_register_tokens (int): Number of register tokens prepended
+            after the CLS token. DINOv3 ViT-S/16 uses 4.
+        patch_size (int): Patch size of the ViT model. Default: 16.
+        embed_dim (int): Embedding dimension of the ViT model.
+            ViT-S: 384, ViT-B: 768, ViT-L: 1024.
         frozen (bool): If True, freeze all backbone parameters.
         init_cfg (dict, optional): Initialization config.
     """
 
-    # embed_dim for each model variant
-    EMBED_DIMS = {
-        'dinov3_vits16': 384,
-        'dinov3_vits16plus': 384,
-        'dinov3_vitb16': 768,
-        'dinov3_vitl16': 1024,
-        'dinov3_vitl16plus': 1024,
-        'dinov3_vith16plus': 1280,
-        'dinov3_vit7b16': 1408,
-    }
-
     def __init__(self,
-                 model_name='dinov3_vits16',
-                 repo_path='third_party/dinov3',
-                 pretrained_weights='ckpts/dinov3_vits16.pth',
+                 model_path,
+                 num_register_tokens=4,
+                 patch_size=16,
+                 embed_dim=384,
                  frozen=True,
                  init_cfg=None):
         super(DINOv3Backbone, self).__init__(init_cfg=init_cfg)
 
-        self.model_name = model_name
-        self.patch_size = 16
-        self.embed_dim = self.EMBED_DIMS.get(model_name, 384)
+        from transformers import AutoModel
 
-        # Load DINOv3 from local repo (no pretrained weights from hub)
-        self.dinov3 = torch.hub.load(
-            repo_path,
-            model_name,
-            source='local',
-            pretrained=False,
-        )
+        self.patch_size = patch_size
+        self.embed_dim = embed_dim
+        # token layout: [CLS] + [num_register_tokens] + [patch_tokens]
+        self.num_prefix_tokens = 1 + num_register_tokens
 
-        # Load pretrained weights
-        if pretrained_weights and os.path.isfile(pretrained_weights):
-            state_dict = torch.load(pretrained_weights, map_location='cpu')
-            # Handle nested checkpoint formats
-            if 'model' in state_dict:
-                state_dict = state_dict['model']
-            elif 'state_dict' in state_dict:
-                state_dict = state_dict['state_dict']
-            missing, unexpected = self.dinov3.load_state_dict(
-                state_dict, strict=False)
-            if missing:
-                print(f'[DINOv3Backbone] Missing keys: {missing[:5]}...')
-            if unexpected:
-                print(f'[DINOv3Backbone] Unexpected keys: {unexpected[:5]}...')
-            print(f'[DINOv3Backbone] Loaded weights from {pretrained_weights}')
-        else:
-            print(f'[DINOv3Backbone] WARNING: pretrained_weights not found '
-                  f'at {pretrained_weights}, using random init.')
+        self.dinov3 = AutoModel.from_pretrained(model_path)
 
         if frozen:
             for param in self.dinov3.parameters():
                 param.requires_grad = False
             self.dinov3.eval()
-            print('[DINOv3Backbone] Backbone frozen.')
+            print(f'[DINOv3Backbone] Backbone frozen. Loaded from {model_path}')
+        else:
+            print(f'[DINOv3Backbone] Backbone unfrozen. Loaded from {model_path}')
 
         self.frozen = frozen
 
@@ -93,8 +67,8 @@ class DINOv3Backbone(BaseModule):
                 H and W must be divisible by patch_size (16).
 
         Returns:
-            tuple[Tensor]: Single-element tuple containing the feature map
-                of shape (B, embed_dim, H//16, W//16).
+            tuple[Tensor]: Single-element tuple with feature map
+                shape (B, embed_dim, H//patch_size, W//patch_size).
         """
         B, C, H, W = x.shape
         h = H // self.patch_size
@@ -102,22 +76,14 @@ class DINOv3Backbone(BaseModule):
 
         if self.frozen:
             with torch.no_grad():
-                # get_intermediate_layers returns list of spatial feature maps
-                # when reshape=True: each element is (B, embed_dim, h, w)
-                features = self.dinov3.get_intermediate_layers(
-                    x,
-                    n=1,
-                    reshape=True,
-                    return_class_token=False,
-                )
+                outputs = self.dinov3(pixel_values=x)
         else:
-            features = self.dinov3.get_intermediate_layers(
-                x,
-                n=1,
-                reshape=True,
-                return_class_token=False,
-            )
+            outputs = self.dinov3(pixel_values=x)
 
-        # features is a list of length n; take the last layer's output
-        feat = features[-1]  # (B, embed_dim, h, w)
+        # last_hidden_state: (B, 1 + num_register_tokens + h*w, embed_dim)
+        tokens = outputs.last_hidden_state
+        # drop CLS and register tokens, keep only patch tokens
+        patch_tokens = tokens[:, self.num_prefix_tokens:, :]  # (B, h*w, embed_dim)
+        # reshape to spatial feature map
+        feat = patch_tokens.permute(0, 2, 1).reshape(B, self.embed_dim, h, w)
         return (feat,)

@@ -52,9 +52,10 @@ model = dict(
     pretrained=None,           # DINOv3 loads its own weights internally
     img_backbone=dict(
         type='DINOv3Backbone',
-        model_name='dinov3_vits16',
-        repo_path='third_party/dinov3',         # local clone of facebookresearch/dinov3
-        pretrained_weights='ckpts/dinov3_vits16.pth',  # downloaded HuggingFace checkpoint
+        model_path='ckpts/dinov3-vits16-pretrain-lvd1689m',  # local HF snapshot dir
+        num_register_tokens=4,   # DINOv3 ViT-S/16 uses 4 register tokens
+        patch_size=16,
+        embed_dim=384,           # ViT-S embed dim
         frozen=True,
     ),
     img_neck=dict(
