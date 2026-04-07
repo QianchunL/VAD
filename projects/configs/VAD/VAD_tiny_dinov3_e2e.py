@@ -353,8 +353,8 @@ test_pipeline = [
 ]
 
 data = dict(
-    samples_per_gpu=10,  # batch*num_cams(6) must divide im2col_step(64): 10*6=60<=64 OK; 11*6=66>64 and 66%64!=0 FAIL
-    workers_per_gpu=8,
+    samples_per_gpu=1,
+    workers_per_gpu=4,
     train=dict(
         type=dataset_type,
         data_root=data_root,
