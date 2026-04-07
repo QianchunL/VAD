@@ -353,7 +353,7 @@ test_pipeline = [
 ]
 
 data = dict(
-    samples_per_gpu=16,
+    samples_per_gpu=10,  # batch*num_cams(6) must divide im2col_step(64): 10*6=60<=64 OK; 11*6=66>64 and 66%64!=0 FAIL
     workers_per_gpu=4,
     train=dict(
         type=dataset_type,
@@ -402,7 +402,7 @@ data = dict(
 
 optimizer = dict(
     type='AdamW',
-    lr=3.2e-3,  # linear scaling: 2e-4 * 16 (samples_per_gpu=16 vs original 1)
+    lr=2e-3,  # linear scaling: 2e-4 * 10 (samples_per_gpu=10 vs original 1)
     paramwise_cfg=dict(
         custom_keys={
             'img_backbone': dict(lr_mult=0.0),  # backbone is frozen
