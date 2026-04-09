@@ -353,8 +353,8 @@ test_pipeline = [
 ]
 
 data = dict(
-    samples_per_gpu=1,
-    workers_per_gpu=4,
+    samples_per_gpu=16,  # single GPU 2x: original 8GPU×1=8, here 1GPU×16=16 effective batch
+    workers_per_gpu=8,
     train=dict(
         type=dataset_type,
         data_root=data_root,
@@ -402,7 +402,7 @@ data = dict(
 
 optimizer = dict(
     type='AdamW',
-    lr=2e-4,  # same as original VAD_tiny default
+    lr=4e-4,  # linear scaling: original lr=2e-4 @ batch=8, here batch=16 → 4e-4
     paramwise_cfg=dict(
         custom_keys={
             'img_backbone': dict(lr_mult=0.0),  # backbone is frozen
