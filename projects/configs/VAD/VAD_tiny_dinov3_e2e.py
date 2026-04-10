@@ -354,7 +354,7 @@ test_pipeline = [
 
 data = dict(
     samples_per_gpu=16,  # single GPU 2x: original 8GPU×1=8, here 1GPU×16=16 effective batch
-    workers_per_gpu=8,
+    workers_per_gpu=4,
     train=dict(
         type=dataset_type,
         data_root=data_root,
