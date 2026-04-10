@@ -258,31 +258,32 @@ class PlanningMetric():
 
         '''
         B, n_future, _ = trajs.shape
-        # trajs = trajs * torch.tensor([-1, 1], device=trajs.device)
-        # gt_trajs = gt_trajs * torch.tensor([-1, 1], device=gt_trajs.device)
 
-        obj_coll_sum = torch.zeros(n_future, device=segmentation.device)
-        obj_box_coll_sum = torch.zeros(n_future, device=segmentation.device)
+        trajs = trajs.cpu()
+        gt_trajs = gt_trajs.cpu()
+        segmentation = segmentation.cpu()
+
+        obj_coll_sum = torch.zeros(n_future)
+        obj_box_coll_sum = torch.zeros(n_future)
 
         for i in range(B):
             gt_box_coll = self.evaluate_single_coll(gt_trajs[i], segmentation[i], input_gt=True)
 
             xx, yy = trajs[i,:,0], trajs[i, :, 1]
-            # lidar系下的轨迹转换到图片坐标系下
             xi = ((-self.bx[0]/2 - yy) / self.dx[0]).long()
             yi = ((-self.bx[1]/2 + xx) / self.dx[1]).long()
 
             m1 = torch.logical_and(
                 torch.logical_and(xi >= 0, xi < self.bev_dimension[0]),
                 torch.logical_and(yi >= 0, yi < self.bev_dimension[1]),
-            ).to(gt_box_coll.device)
+            )
             m1 = torch.logical_and(m1, torch.logical_not(gt_box_coll))
 
             ti = torch.arange(n_future)
             obj_coll_sum[ti[m1]] += segmentation[i, ti[m1], xi[m1], yi[m1]].long()
 
             m2 = torch.logical_not(gt_box_coll)
-            box_coll = self.evaluate_single_coll(trajs[i], segmentation[i], input_gt=False).to(ti.device)
+            box_coll = self.evaluate_single_coll(trajs[i], segmentation[i], input_gt=False)
             obj_box_coll_sum[ti[m2]] += (box_coll[ti[m2]]).long()
 
         return obj_coll_sum, obj_box_coll_sum
